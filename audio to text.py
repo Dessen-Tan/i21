@@ -11,9 +11,20 @@ try:
 except ModuleNotFoundError:
     AUDIO_RECORDER_AVAILABLE = False
 
-# Load env variables (make sure you have .env with OPENAI_API_KEY)
-load_dotenv()
+
+load_dotenv()  # Load environment variables from .env file
+
 api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
+    st.stop()  # Stop the app if key is missing
+
+# Optional: print for debugging (remove in production)
+print("Loaded OpenAI API key:", api_key)
+
+from openai import OpenAI
+client = OpenAI(api_key=api_key)api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
     st.stop()
