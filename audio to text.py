@@ -4,27 +4,15 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# External dependencies
 try:
     from audiorecorder import audiorecorder
     AUDIO_RECORDER_AVAILABLE = True
 except ModuleNotFoundError:
     AUDIO_RECORDER_AVAILABLE = False
 
-
-load_dotenv()  # Load environment variables from .env file
-
+load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 
-if not api_key:
-    st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
-    st.stop()  # Stop the app if key is missing
-
-# Optional: print for debugging (remove in production)
-print("Loaded OpenAI API key:", api_key)
-
-from openai import OpenAI
-client = OpenAI(api_key=api_key)api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
     st.stop()
@@ -33,7 +21,6 @@ client = OpenAI(api_key=api_key)
 
 st.title("Record Audio & Transcribe with Whisper")
 
-# Placeholder for transcription text area before recording
 transcription_placeholder = st.empty()
 transcription_placeholder.text_area("Transcription will appear here...", value="", height=200, key="transcription_placeholder")
 
@@ -44,13 +31,9 @@ else:
     recorded_audio = None
 
 if recorded_audio and len(recorded_audio) > 0:
-    # Convert recorded audio to bytes
     audio_bytes = recorded_audio.tobytes()
-
-    # Display the audio player
     st.audio(audio_bytes, format="audio/wav")
 
-    # Prepare BytesIO for OpenAI API
     audio_file = io.BytesIO(audio_bytes)
     audio_file.name = "recorded_audio.wav"
 
@@ -63,11 +46,11 @@ if recorded_audio and len(recorded_audio) > 0:
             )
             transcription_text = transcription_response.text
 
-        # Update the placeholder with the transcription result
         transcription_placeholder.text_area("Transcription:", value=transcription_text, height=200)
 
     except Exception as e:
         st.error(f"Error during transcription: {e}")
+
 elif recorded_audio is not None and len(recorded_audio) == 0:
     st.info("No audio recorded yet. Please click 'Click to record' and then stop to capture audio.")
 else:
