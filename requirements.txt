@@ -5,3 +5,4 @@ pydub==0.25.1
 streamlit-audiorecorder
 openai
 st-audiorec
+python-dotenv
