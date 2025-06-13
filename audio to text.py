@@ -9,9 +9,9 @@ st.title("Audio Recorder + Offline Transcription")
 recorded_audio = audiorecorder("Click to record", "Stop recording")
 
 if recorded_audio and len(recorded_audio) > 0:
-    audio_bytes = recorded_audio.tobytes()
-    st.audio(audio_bytes, format="audio/wav")
+    audio_bytes = bytes(recorded_audio)  # or just recorded_audio
 
+    st.audio(audio_bytes, format="audio/wav")
     audio_buffer = io.BytesIO(audio_bytes)
 
     with wave.open(audio_buffer, 'rb') as wav_file:
