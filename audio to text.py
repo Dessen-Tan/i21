@@ -3,6 +3,14 @@ import io
 import speech_recognition as sr
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+from openai import OpenAI
+
+
+load_dotenv()
+key = os.getenv('OPENAI_API_KEY')
+MODEL = 'gpt-4o'
+client = OpenAI(api_key = key)
+
 
 st.set_page_config(layout="centered")
 
@@ -93,13 +101,21 @@ else:
     st.info("Recording feature is currently disabled due to a configuration issue.")
     recorded_audio_bytes = None
 
-
+if recorded_audio_bytes and recorded_audio_bytes != b"":
+    with open("recorded_audio.wav", "wb") as f:
+        audio_file = f.write(recorded_audio_bytes)
 
 if uploaded_file is not None:
     file_ext = uploaded_file.name.split('.')[-1].lower()
     process_and_transcribe(uploaded_file.read(), source_type="uploaded file", file_extension=file_ext)
 elif recorded_audio_bytes:
         text1 = process_and_transcribe(recorded_audio_bytes, source_type="recorded audio", file_extension="wav")
-        st.text_area("Transcription Result", text1, height=200, key=f"transcribed_text_{source_type}")
+        st.title('Audio Transcript')
+        transcription = client.audio.transcriptions.create(
+        model="whisper-1", 
+        file=audio_file, 
+        prompt="provide an accurate transcription of the audio file using ponctuations and capitalization as well."
+        )
+        st.write(transcription.text)    
     
 st.sidebar.info("This is the Speech-to-Text page.")
