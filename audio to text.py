@@ -1,59 +1,41 @@
 import streamlit as st
+from audiorecorder import audiorecorder
 import io
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+from pydub import AudioSegment
+import speech_recognition as sr
 
-try:
-    from audiorecorder import audiorecorder
-    AUDIO_RECORDER_AVAILABLE = True
-except ModuleNotFoundError:
-    AUDIO_RECORDER_AVAILABLE = False
-
-load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-
-if not api_key:
-    st.error("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
-    st.stop()
-
-client = OpenAI(api_key=api_key)
-
-st.title("Record Audio & Transcribe with Whisper")
+st.title("Record Audio & Transcribe ")
 
 transcription_placeholder = st.empty()
 transcription_placeholder.text_area("Transcription will appear here...", value="", height=200, key="transcription_placeholder")
 
-if AUDIO_RECORDER_AVAILABLE:
-    recorded_audio = audiorecorder("Click to record", "Stop recording")
-else:
-    st.warning("Audio recording is disabled. Please ensure 'streamlit-audiorecorder' is installed and listed in requirements.txt.")
-    recorded_audio = None
+recorded = audiorecorder("Click to record", "Stop recording")
 
-if recorded_audio and len(recorded_audio) > 0:
-    audio_bytes = recorded_audio.tobytes()
+if recorded and len(recorded) > 0:
+    audio_bytes = recorded.tobytes()
     st.audio(audio_bytes, format="audio/wav")
 
-    audio_file = io.BytesIO(audio_bytes)
-    audio_file.name = "recorded_audio.wav"
+    audio_seg = AudioSegment(
+        data=audio_bytes,
+        sample_width=recorded.sample_width,
+        frame_rate=recorded.sample_rate,
+        channels=recorded.channels
+    )
+    wav_io = io.BytesIO()
+    audio_seg.export(wav_io, format="wav")
+    wav_io.seek(0)
+
+    r = sr.Recognizer()
+    with sr.AudioFile(wav_io) as source:
+        audio_data = r.record(source)
 
     try:
-        with st.spinner("Transcribing audio. Please wait..."):
-            transcription_response = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-                prompt="Transcribe the audio with punctuation and capitalization."
-            )
-            transcription_text = transcription_response.text
-
-        transcription_placeholder.text_area("Transcription:", value=transcription_text, height=200)
-
-    except Exception as e:
-        st.error(f"Error during transcription: {e}")
-
-elif recorded_audio is not None and len(recorded_audio) == 0:
-    st.info("No audio recorded yet. Please click 'Click to record' and then stop to capture audio.")
+        text = r.recognize_google(audio_data)
+        transcription_placeholder.text_area("Transcription:", value=text, height=200)
+    except sr.UnknownValueError:
+        st.warning("Could not understand audio.")
+    except sr.RequestError:
+        st.error("Speech Recognition API error.")
 else:
-    st.info("Click the button above to start recording.")
+    st.info("Click to record audio above.")
 
-st.sidebar.info("This is the Audio-to-Text transcription page.")
