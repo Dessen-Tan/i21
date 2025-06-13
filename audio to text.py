@@ -1,6 +1,7 @@
 from audiorecorder import audiorecorder
 import streamlit as st
 import io
+import numpy as np
 import speech_recognition as sr
 from pydub import AudioSegment
 
@@ -32,19 +33,19 @@ st.title("Record, Transcribe & Save Audio")
 
 recorded_audio = audiorecorder("Click to record", "Stop recording")
 
-if recorded_audio:
+if recorded_audio is not None and len(recorded_audio) > 0:
     try:
-        # Convert to bytes, audiorecorder returns numpy array or bytes
-        if hasattr(recorded_audio, "tobytes"):
+        if isinstance(recorded_audio, np.ndarray):
             audio_bytes = recorded_audio.tobytes()
         elif isinstance(recorded_audio, bytes):
             audio_bytes = recorded_audio
+        elif isinstance(recorded_audio, list):
+            audio_bytes = np.array(recorded_audio).tobytes()
         else:
-            st.error("Unsupported audio data format")
+            st.error(f"Unsupported audio data format: {type(recorded_audio)}")
             audio_bytes = None
 
         if audio_bytes:
-            # Save as WAV bytes using AudioSegment export for safety
             audio_segment = AudioSegment(
                 audio_bytes,
                 frame_rate=44100,
