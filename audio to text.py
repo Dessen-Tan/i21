@@ -1,45 +1,33 @@
 import streamlit as st
 from audiorecorder import audiorecorder
-import io
-from pydub import AudioSegment
 import speech_recognition as sr
-import numpy as np
+import io
+import wave
 
-st.title("Record Audio & Transcribe (No OpenAI)")
+st.title("Audio Recorder + Offline Transcription")
 
-transcription_placeholder = st.empty()
-transcription_placeholder.text_area("Transcription will appear here...", value="", height=200, key="transcription_placeholder")
+recorded_audio = audiorecorder("Click to record", "Stop recording")
 
-recorded = audiorecorder("Click to record", "Stop recording")
+if recorded_audio and len(recorded_audio) > 0:
+    audio_bytes = recorded_audio.tobytes()
+    st.audio(audio_bytes, format="audio/wav")
 
-if isinstance(recorded, np.ndarray) and recorded.shape[0] > 0:
-    # Convert NumPy array to bytes manually
-    audio_bytes = recorded.astype(np.int16).tobytes()
+    audio_buffer = io.BytesIO(audio_bytes)
 
-    # Create a WAV-compatible audio segment
-    audio_seg = AudioSegment(
-        data=audio_bytes,
-        sample_width=2,
-        frame_rate=44100,
-        channels=1
-    )
-    wav_io = io.BytesIO()
-    audio_seg.export(wav_io, format="wav")
-    wav_io.seek(0)
-
-    st.audio(wav_io, format="audio/wav")
-
-    r = sr.Recognizer()
-    with sr.AudioFile(wav_io) as source:
-        audio_data = r.record(source)
-
-    try:
-        text = r.recognize_google(audio_data)
-        transcription_placeholder.text_area("Transcription:", value=text, height=200)
-    except sr.UnknownValueError:
-        st.warning("Could not understand audio.")
-    except sr.RequestError:
-        st.error("Speech Recognition API error.")
+    with wave.open(audio_buffer, 'rb') as wav_file:
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(wav_file) as source:
+            audio_data = recognizer.record(source)
+            try:
+                text = recognizer.recognize_google(audio_data)
+                st.text_area("Transcription", value=text, height=200)
+            except sr.UnknownValueError:
+                st.error("Speech Recognition could not understand audio")
+            except sr.RequestError as e:
+                st.error(f"Could not request results; {e}")
 else:
-    st.info("Click to record audio above.")
+    st.info("Click record to start speaking")
+
+st.sidebar.info("Audio-to-Text page using SpeechRecognition")
+
 
