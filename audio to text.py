@@ -3,13 +3,7 @@ import io
 import speech_recognition as sr
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
-from openai import OpenAI
 
-
-load_dotenv()
-key = os.getenv('OPENAI_API_KEY')
-MODEL = 'gpt-4o'
-client = OpenAI(api_key = key)
 
 
 st.set_page_config(layout="centered")
@@ -95,23 +89,36 @@ st.markdown("<h3 style='text-align: center; color: grey;'>OR</h3>", unsafe_allow
 
 st.subheader("Option 2: Record Audio Directly")
 
-if AUDIO_RECORDER_AVAILABLE:
-    recorded_audio_bytes = audiorecorder("Click to Record, Stop recording")
+recorded_audio = audiorecorder("Click to record", "Stop recording")
+
+if recorded_audio:  
+    st.audio(recorded_audio.tobytes())  
+
+    audio_bytes = recorded_audio.tobytes()
+    audio_segment = AudioSegment(
+        data=audio_bytes,
+        sample_width=recorded_audio.sample_width,
+        frame_rate=recorded_audio.sample_rate,
+        channels=recorded_audio.channels,
+    )
+
+    wav_io = io.BytesIO()
+    audio_segment.export(wav_io, format="wav")
+    wav_io.seek(0)
+
+    # Transcribe with SpeechRecognition
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(wav_io) as source:
+        audio_data = recognizer.record(source)
+
+    try:
+        text = recognizer.recognize_google(audio_data)
+        st.subheader("Transcription")
+        st.write(text)
+    except sr.UnknownValueError:
+        st.warning("Sorry, could not understand the audio")
+    except sr.RequestError as e:
+        st.error(f"Could not request results from Google Speech Recognition service; {e}")
 else:
-    st.info("Recording feature is currently disabled due to a configuration issue.")
-    recorded_audio_bytes = None
-
-
-
-if uploaded_file is not None:
-    file_ext = uploaded_file.name.split('.')[-1].lower()
-    process_and_transcribe(uploaded_file.read(), source_type="uploaded file", file_extension=file_ext)
-elif recorded_audio_bytes:
-    if recorded_audio_bytes != b"":
-        try:
-            process_and_transcribe(recorded_audio_bytes, source_type="recording")
-        except RuntimeError:
-            st.error(f"Sorry we are still trying to make this function work")
-    else:
-        st.warning("No audio detected. Please try recording again.")
+    st.info("Click the button above to start recording.")
 st.sidebar.info("This is the Speech-to-Text page.")
