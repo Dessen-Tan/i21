@@ -3,6 +3,14 @@ import io
 import speech_recognition as sr
 from pydub import AudioSegment
 from pydub.exceptions import CouldntDecodeError
+from openai import OpenAI
+
+
+load_dotenv()
+key = os.getenv('OPENAI_API_KEY')
+MODEL = 'gpt-4o'
+client = OpenAI(api_key = key)
+
 
 
 
@@ -92,33 +100,23 @@ st.subheader("Option 2: Record Audio Directly")
 recorded_audio = audiorecorder("Click to record", "Stop recording")
 
 if recorded_audio:  
-    st.audio(recorded_audio.tobytes())  
-
     audio_bytes = recorded_audio.tobytes()
-    audio_segment = AudioSegment(
-        data=audio_bytes,
-        sample_width=recorded_audio.sample_width,
-        frame_rate=recorded_audio.sample_rate,
-        channels=recorded_audio.channels,
+    
+    import io
+    audio_file = io.BytesIO(audio_bytes)
+    audio_file.name = "recorded_audio.wav" 
+
+    st.audio(audio_bytes)
+
+    st.title('Audio Transcript')
+    transcription = client.audio.transcriptions.create(
+        model="whisper-1", 
+        file=audio_file, 
+        prompt="Provide an accurate transcription of the audio using punctuation and capitalization."
     )
-
-    wav_io = io.BytesIO()
-    audio_segment.export(wav_io, format="wav")
-    wav_io.seek(0)
-
-    # Transcribe with SpeechRecognition
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(wav_io) as source:
-        audio_data = recognizer.record(source)
-
-    try:
-        text = recognizer.recognize_google(audio_data)
-        st.subheader("Transcription")
-        st.write(text)
-    except sr.UnknownValueError:
-        st.warning("Sorry, could not understand the audio")
-    except sr.RequestError as e:
-        st.error(f"Could not request results from Google Speech Recognition service; {e}")
+    st.write(transcription.text)
 else:
     st.info("Click the button above to start recording.")
+
+    
 st.sidebar.info("This is the Speech-to-Text page.")
