@@ -99,14 +99,11 @@ if uploaded_file is not None:
     file_ext = uploaded_file.name.split('.')[-1].lower()
     process_and_transcribe(uploaded_file.read(), source_type="uploaded file", file_extension=file_ext)
 elif recorded_audio_bytes:
-    if recorded_audio_bytes != b"":
-        text = process_and_transcribe(recorded_audio_bytes, source_type="recorded audio", file_extension="wav")
-    try:
+   if recorded_audio_bytes and recorded_audio_bytes != b"":
+    text = process_and_transcribe(recorded_audio_bytes, source_type="recorded audio", file_extension="wav")
+    if text:
         st.write("Transcription:")
         st.write(text)
-    except sr.UnknownValueError:
-        st.write("Could not understand audio")
-    except sr.RequestError as e:
-        st.write(f"Could not request results from Google Speech Recognition service; {e}")
-
+else:
+    st.warning("No audio detected. Please try recording again.")
 st.sidebar.info("This is the Speech-to-Text page.")
