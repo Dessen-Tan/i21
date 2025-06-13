@@ -107,19 +107,11 @@ if uploaded_file is not None:
     file_ext = uploaded_file.name.split('.')[-1].lower()
     process_and_transcribe(uploaded_file.read(), source_type="uploaded file", file_extension=file_ext)
 elif recorded_audio_bytes:
-        if recorded_audio_bytes and recorded_audio_bytes != b"":
-        with open("recorded_audio.wav", "wb") as f:
-            f.write(recorded_audio_bytes)
-
-        with open("recorded_audio.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-1", 
-                file=audio_file,
-                prompt="Provide an accurate transcription of the audio file using punctuation and capitalization."
-            )
-            st.title('Audio Transcript')
-            st.write(transcription.text)  
-            except Exception as e:
-        st.error(f"Transcription failed: {e}")
-    
+    if recorded_audio_bytes != b"":
+        try:
+            process_and_transcribe(recorded_audio_bytes, source_type="recording")
+        except RuntimeError:
+            st.error(f"Sorry we are still trying to make this function work")
+    else:
+        st.warning("No audio detected. Please try recording again.")
 st.sidebar.info("This is the Speech-to-Text page.")
