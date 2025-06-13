@@ -1,36 +1,85 @@
 from audiorecorder import audiorecorder
 import streamlit as st
 import io
+import speech_recognition as sr
+from pydub import AudioSegment
+
+def transcribe_audio(audio_bytes):
+    try:
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes), format="wav")
+        wav_io = io.BytesIO()
+        audio_segment.export(wav_io, format="wav")
+        wav_io.seek(0)
+
+        r = sr.Recognizer()
+        with sr.AudioFile(wav_io) as source:
+            audio_data = r.record(source)
+
+        text = r.recognize_google(audio_data)
+        return text
+    except sr.UnknownValueError:
+        st.warning("Could not understand audio.")
+        return None
+    except sr.RequestError as e:
+        st.error(f"Speech Recognition API error: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
+        return None
 
 st.set_page_config(layout="centered")
-st.title("Record Audio and Save")
+st.title("Record, Transcribe & Save Audio")
 
-try:
-    recorded_audio = audiorecorder("Click to start recording", "Click to stop")
+recorded_audio = audiorecorder("Click to record", "Stop recording")
 
-    if recorded_audio is not None and len(recorded_audio) > 0:
-        audio_bytes = recorded_audio.tobytes()
+if recorded_audio:
+    try:
+        # Convert to bytes, audiorecorder returns numpy array or bytes
+        if hasattr(recorded_audio, "tobytes"):
+            audio_bytes = recorded_audio.tobytes()
+        elif isinstance(recorded_audio, bytes):
+            audio_bytes = recorded_audio
+        else:
+            st.error("Unsupported audio data format")
+            audio_bytes = None
 
-        st.audio(audio_bytes, format="audio/wav")
+        if audio_bytes:
+            # Save as WAV bytes using AudioSegment export for safety
+            audio_segment = AudioSegment(
+                audio_bytes,
+                frame_rate=44100,
+                sample_width=2,
+                channels=1
+            )
+            wav_io = io.BytesIO()
+            audio_segment.export(wav_io, format="wav")
+            wav_io.seek(0)
+            wav_bytes = wav_io.read()
 
-        bio = io.BytesIO(audio_bytes)
-        bio.name = "recording.wav"
-        bio.seek(0)
+            st.audio(wav_bytes, format="audio/wav")
 
-        st.download_button(
-            label="Save Recording",
-            data=bio,
-            file_name="recording.wav",
-            mime="audio/wav"
-        )
-    elif recorded_audio is not None and len(recorded_audio) == 0:
-        st.info("No audio recorded yet. Click the button above to record.")
+            transcription = transcribe_audio(wav_bytes)
 
-except AttributeError as e:
-    st.error(f"AttributeError: {e}")
-except TypeError as e:
-    st.error(f"TypeError: {e}")
-except Exception as e:
-    st.error(f"Unexpected error: {e}")
+            if transcription:
+                st.subheader("Transcription")
+                st.text_area("Transcribed text:", transcription, height=200)
 
-st.sidebar.info("Record your audio and save it as WAV.")
+                st.download_button(
+                    "Download Transcription as TXT",
+                    data=transcription,
+                    file_name="transcription.txt",
+                    mime="text/plain",
+                )
+
+            st.download_button(
+                "Download Recorded Audio as WAV",
+                data=wav_bytes,
+                file_name="recorded_audio.wav",
+                mime="audio/wav",
+            )
+    except Exception as e:
+        st.error(f"Error processing audio: {e}")
+else:
+    st.info("Click the record button to start recording.")
+
+st.sidebar.info("Audio recorder and transcription app, no API keys required.")
