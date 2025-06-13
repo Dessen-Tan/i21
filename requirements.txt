@@ -3,5 +3,4 @@ gTTS
 SpeechRecognition
 pydub==0.25.1
 streamlit-audiorecorder
-openai
 python-dotenv
