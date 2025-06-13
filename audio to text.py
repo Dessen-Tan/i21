@@ -1,7 +1,7 @@
 import streamlit as st
-import io
 import speech_recognition as sr
 from pydub import AudioSegment
+from audiorecorder import audiorecorder
 from pydub.exceptions import CouldntDecodeError
 from openai import OpenAI
 
