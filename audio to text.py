@@ -99,11 +99,8 @@ if uploaded_file is not None:
     file_ext = uploaded_file.name.split('.')[-1].lower()
     process_and_transcribe(uploaded_file.read(), source_type="uploaded file", file_extension=file_ext)
 elif recorded_audio_bytes:
-    if recorded_audio_bytes != b"":
-          r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening...")
-        audio = r.listen(source)
+if recorded_audio_bytes != b"":
+        r = process_and_transcribe(recorded_audio_bytes, source_type="recorded audio", file_extension="wav")
     try:
         text = r.recognize_google(audio)
         st.write("Transcription:")
